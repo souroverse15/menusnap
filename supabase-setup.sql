@@ -157,14 +157,16 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     cafe_id UUID NOT NULL REFERENCES cafes(id) ON DELETE CASCADE,
+    customer_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     customer_name VARCHAR(255) NOT NULL,
     customer_email VARCHAR(255),
     customer_phone VARCHAR(20),
-    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED')),
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED', 'CANCELLED')),
     order_type VARCHAR(20) DEFAULT 'PICKUP' CHECK (order_type IN ('PICKUP', 'DINE_IN', 'DELIVERY')),
     total_amount DECIMAL(10,2) NOT NULL,
     notes TEXT,
     estimated_ready_time TIMESTAMP WITH TIME ZONE,
+    queue_position INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

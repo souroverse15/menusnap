@@ -38,6 +38,9 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <Button variant="outline" asChild>
+              <Link to="/cafes">Explore</Link>
+            </Button>
             {isSignedIn ? (
               <Button asChild>
                 <Link to="/dashboard">Go to Dashboard</Link>
@@ -208,7 +211,7 @@ export default function LandingPage() {
                   <CardHeader className="text-center">
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold">${plan.price}</span>
+                      <span className="text-4xl font-bold">৳{plan.price}</span>
                       <span className="text-muted-foreground">/month</span>
                     </div>
                     <CardDescription className="mt-2">

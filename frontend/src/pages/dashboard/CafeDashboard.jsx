@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 
 // Components
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -19,6 +20,8 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 // API
 import { supportApi } from "@/lib/api";
+import MenuManagement from "../../components/cafe/MenuManagement";
+import OrderManagement from "../../components/cafe/OrderManagement";
 
 // Icons
 import {
@@ -38,6 +41,40 @@ import {
 export default function CafeDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [cafeId, setCafeId] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Get cafe information from dashboard API
+  useEffect(() => {
+    const fetchCafeData = async () => {
+      try {
+        setLoading(true);
+        const token = await window.Clerk.session.getToken();
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/cafe/dashboard`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setCafeId(data.data?.cafe?.id);
+          setDashboardData(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching cafe data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCafeData();
+  }, []);
 
   const navigation = [
     { name: "Overview", id: "overview", icon: LayoutDashboard },
@@ -48,36 +85,43 @@ export default function CafeDashboard() {
     { name: "Settings", id: "settings", icon: Settings },
   ];
 
-  const stats = [
-    {
-      title: "Total Orders",
-      value: "127",
-      change: "+23%",
-      changeType: "positive",
-      icon: ShoppingBag,
-    },
-    {
-      title: "This Month",
-      value: "43",
-      change: "+12%",
-      changeType: "positive",
-      icon: TrendingUp,
-    },
-    {
-      title: "Avg Order Time",
-      value: "8 min",
-      change: "-2 min",
-      changeType: "positive",
-      icon: Clock,
-    },
-    {
-      title: "Active Customers",
-      value: "89",
-      change: "+15%",
-      changeType: "positive",
-      icon: Users,
-    },
-  ];
+  // Generate dynamic stats from dashboard data
+  const stats = dashboardData?.stats
+    ? [
+        {
+          title: "Total Orders",
+          value: dashboardData.stats.totalOrders?.toString() || "0",
+          change: null,
+          changeType: "neutral",
+          icon: ShoppingBag,
+        },
+        {
+          title: "This Month",
+          value: dashboardData.stats.monthlyOrders?.toString() || "0",
+          change: null,
+          changeType: "neutral",
+          icon: TrendingUp,
+        },
+        {
+          title: "Monthly Limit",
+          value: dashboardData.stats.orderLimit?.toString() || "∞",
+          change: dashboardData.stats.orderLimit
+            ? `${dashboardData.stats.monthlyOrders || 0}/${
+                dashboardData.stats.orderLimit
+              }`
+            : null,
+          changeType: "neutral",
+          icon: Clock,
+        },
+        {
+          title: "Revenue",
+          value: `৳${dashboardData.stats.revenue?.toFixed(2) || "0.00"}`,
+          change: null,
+          changeType: "positive",
+          icon: Users,
+        },
+      ]
+    : [];
 
   return (
     <DashboardLayout
@@ -89,29 +133,67 @@ export default function CafeDashboard() {
       notifications={[]}
     >
       <Routes>
-        <Route path="/" element={<OverviewTab stats={stats} />} />
-        <Route path="/menu" element={<MenuTab />} />
-        <Route path="/orders" element={<OrdersTab />} />
-        <Route path="/analytics" element={<AnalyticsTab />} />
+        <Route
+          path="/"
+          element={
+            <OverviewTab
+              stats={stats}
+              cafeData={dashboardData?.cafe}
+              recentOrders={dashboardData?.recentOrders || []}
+              loading={loading}
+            />
+          }
+        />
+        <Route path="/menu" element={<MenuTab cafeId={cafeId} />} />
+        <Route path="/orders" element={<OrdersTab cafeId={cafeId} />} />
+        <Route path="/analytics" element={<AnalyticsTab cafeId={cafeId} />} />
         <Route path="/support" element={<SupportTab />} />
-        <Route path="/settings" element={<SettingsTab />} />
+        <Route path="/settings" element={<SettingsTab cafeId={cafeId} />} />
       </Routes>
     </DashboardLayout>
   );
 }
 
-function OverviewTab({ stats }) {
+function OverviewTab({ stats, cafeData, recentOrders, loading }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="lg" />
+        <p className="ml-4 text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  const getStatusColor = (status) => {
+    const colors = {
+      PENDING: "bg-yellow-100 text-yellow-800",
+      ACCEPTED: "bg-blue-100 text-blue-800",
+      IN_PROGRESS: "bg-purple-100 text-purple-800",
+      READY: "bg-green-100 text-green-800",
+      COMPLETED: "bg-gray-100 text-gray-800",
+      CANCELLED: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Message */}
       <div className="bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-2">
-          Welcome to your café dashboard!
+          Welcome back{cafeData?.name ? `, ${cafeData.name}!` : "!"}
         </h2>
         <p className="text-rose-100">
           Manage your digital menu, track orders, and grow your business with
           MenuSnap.
         </p>
+        {cafeData?.plan && (
+          <div className="mt-4">
+            <Badge className="bg-white/20 text-white">
+              {cafeData.plan} Plan
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -176,16 +258,54 @@ function OverviewTab({ stats }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates from your café</CardDescription>
+            <CardTitle>Recent Orders</CardTitle>
+            <CardDescription>Latest orders from your café</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <Coffee className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No recent activity
-              </p>
-            </div>
+            {recentOrders && recentOrders.length > 0 ? (
+              <div className="space-y-3">
+                {recentOrders.slice(0, 5).map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {order.customer_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(order.created_at).toLocaleDateString()} at{" "}
+                          {new Date(order.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getStatusColor(order.status)}>
+                        {order.status}
+                      </Badge>
+                      <span className="text-sm font-medium">
+                        ৳{order.total_amount}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <ShoppingBag className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No recent orders
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Orders will appear here once customers start ordering
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -193,62 +313,12 @@ function OverviewTab({ stats }) {
   );
 }
 
-function MenuTab() {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Menu className="mr-2 h-5 w-5" />
-            Menu Management
-          </CardTitle>
-          <CardDescription>
-            Create and manage your digital menu items
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Menu className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              Menu Management Coming Soon
-            </h3>
-            <p className="text-muted-foreground">
-              This section will allow you to create, edit, and organize your
-              menu items with photos and descriptions.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+function MenuTab({ cafeId }) {
+  return <MenuManagement cafeId={cafeId} />;
 }
 
-function OrdersTab() {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <ShoppingBag className="mr-2 h-5 w-5" />
-            Order Management
-          </CardTitle>
-          <CardDescription>View and manage incoming orders</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              Order Management Coming Soon
-            </h3>
-            <p className="text-muted-foreground">
-              This section will display real-time orders, allow you to update
-              status, and manage the order queue.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+function OrdersTab({ cafeId }) {
+  return <OrderManagement cafeId={cafeId} />;
 }
 
 function AnalyticsTab() {

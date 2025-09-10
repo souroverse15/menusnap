@@ -48,15 +48,9 @@ const applicationSchema = z.object({
     .or(z.literal("")),
   address: z.string().min(5, "Please provide a complete address"),
   city: z.string().min(2, "City is required"),
+  state: z.string().optional(),
   postalCode: z.string().min(3, "Postal code is required"),
-  phone: z
-    .string()
-    .regex(
-      /^\+880\d{10}$/,
-      "Phone number must be in format +880XXXXXXXXXX (10 digits after +880)"
-    )
-    .min(13, "Phone number must be at least 13 characters")
-    .max(13, "Phone number must be exactly 13 characters"),
+  phone: z.string(),
   email: z.string().email("Please provide a valid email address"),
   websiteUrl: z
     .string()
@@ -177,7 +171,8 @@ export default function CafeApplicationWizard() {
       planType: "PLUS",
       cafeDescription: "",
       logoUrl: "",
-      phone: "+880", // Pre-fill with +880 prefix
+      state: "",
+      phone: "", // No pre-fill
       socialLinks: {
         facebook: "",
         instagram: "",
@@ -402,6 +397,15 @@ export default function CafeApplicationWizard() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="state">State/Province</Label>
+                  <Input
+                    id="state"
+                    placeholder="State or Province (optional)"
+                    {...register("state")}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="postalCode">Postal Code *</Label>
                   <Input
                     id="postalCode"
@@ -437,7 +441,7 @@ export default function CafeApplicationWizard() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+880XXXXXXXXXX"
+                    placeholder="+8801XXXXXXX"
                     {...register("phone")}
                     error={errors.phone?.message}
                   />
@@ -588,7 +592,7 @@ export default function CafeApplicationWizard() {
 
                           <div className="mb-4">
                             <span className="text-3xl font-bold">
-                              ${plan.price}
+                              ৳{plan.price}
                             </span>
                             <span className="text-muted-foreground">
                               /month

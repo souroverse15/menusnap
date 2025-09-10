@@ -14,6 +14,8 @@ import cafeRoutes from "./routes/cafeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import menuRoutes from "./routes/menuRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 // Import middleware
 import { requireAuthentication } from "./middleware/authMiddleware.js";
@@ -44,7 +46,7 @@ const PORT = process.env.PORT || 5000;
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs (increased for development)
   message: "Too many requests from this IP, please try again later.",
 });
 
@@ -74,12 +76,20 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/cafe", cafeRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Socket.io middleware and connection handling
 io.use(socketAuth);

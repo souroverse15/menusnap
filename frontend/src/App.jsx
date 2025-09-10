@@ -27,7 +27,15 @@ import NotFoundPage from "./pages/errors/NotFoundPage";
 import UnauthorizedPage from "./pages/errors/UnauthorizedPage";
 
 // Support pages
+import NewTicketPage from "./pages/support/NewTicketPage";
 import TicketDetailPage from "./pages/support/TicketDetailPage";
+
+// Public pages
+import FoodCardsPage from "./pages/FoodCardsPage";
+import TestFoodPage from "./pages/TestFoodPage";
+import CafeMenuPage from "./pages/CafeMenuPage";
+import OrderPage from "./pages/OrderPage";
+import UserOrdersPage from "./pages/UserOrdersPage";
 
 // Hooks
 import { useSocket } from "./hooks/useSocket";
@@ -91,6 +99,21 @@ function App() {
           }
         />
 
+        {/* Public Cafe Routes */}
+        <Route path="/cafes" element={<FoodCardsPage />} />
+        <Route path="/test-food" element={<TestFoodPage />} />
+        <Route path="/cafes/:cafeId/menu" element={<CafeMenuPage />} />
+
+        {/* Protected Ordering Routes */}
+        <Route
+          path="/cafes/:cafeId/order"
+          element={
+            <ProtectedRoute>
+              <OrderPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Role-Based Dashboard Routes */}
         <Route
           path="/admin/*"
@@ -119,6 +142,16 @@ function App() {
           }
         />
 
+        {/* User Order Routes */}
+        <Route
+          path="/user/orders"
+          element={
+            <ProtectedRoute>
+              <UserOrdersPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Redirect based on user role */}
         <Route
           path="/dashboard"
@@ -129,7 +162,15 @@ function App() {
           }
         />
 
-        {/* Support Ticket Detail Route - shared by admin and cafe owners */}
+        {/* Support Routes - shared by admin and cafe owners */}
+        <Route
+          path="/support/new"
+          element={
+            <ProtectedRoute>
+              <NewTicketPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/support/tickets/:ticketId"
           element={

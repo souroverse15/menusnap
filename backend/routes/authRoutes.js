@@ -55,6 +55,23 @@ router.get(
   syncUser,
   AuthController.checkPermissions
 );
+
+// Get user role and status (helpful for debugging)
+router.get("/status", requireAuthentication, syncUser, (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role,
+        firstName: req.user.first_name,
+        lastName: req.user.last_name,
+        isActive: req.user.is_active,
+      },
+    },
+  });
+});
 router.post("/webhook", AuthController.handleWebhook);
 
 export default router;

@@ -163,16 +163,16 @@ class CafeController {
       .select(
         `
         *,
-        subscription_plans!inner(
+        subscription_plans(
           plan_type,
           monthly_order_limit,
-          current_month_orders
+          current_month_orders,
+          is_active
         )
       `
       )
       .eq("owner_id", userId)
-      .eq("is_active", true)
-      .eq("subscription_plans.is_active", true)
+      .eq("status", "ACTIVE")
       .single();
 
     if (cafeError || !cafeData) {
@@ -184,14 +184,45 @@ class CafeController {
 
     const cafe = {
       ...cafeData,
-      plan_type: cafeData.subscription_plans[0]?.plan_type,
-      monthly_order_limit: cafeData.subscription_plans[0]?.monthly_order_limit,
+      plan_type: cafeData.subscription_plans?.[0]?.plan_type || cafeData.plan,
+      monthly_order_limit:
+        cafeData.subscription_plans?.[0]?.monthly_order_limit || null,
       current_month_orders:
-        cafeData.subscription_plans[0]?.current_month_orders,
+        cafeData.subscription_plans?.[0]?.current_month_orders || 0,
     };
 
-    // Get recent orders (placeholder for now)
-    const recentOrders = [];
+    // Get recent orders
+    const { data: recentOrders, error: ordersError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("cafe_id", cafe.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    // Get order statistics
+    const { data: allOrders, error: allOrdersError } = await supabase
+      .from("orders")
+      .select("total_amount, status, created_at")
+      .eq("cafe_id", cafe.id);
+
+    let totalOrders = 0;
+    let monthlyOrders = 0;
+    let revenue = 0;
+
+    if (allOrders && !allOrdersError) {
+      totalOrders = allOrders.length;
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      thisMonth.setHours(0, 0, 0, 0);
+
+      monthlyOrders = allOrders.filter(
+        (order) => new Date(order.created_at) >= thisMonth
+      ).length;
+
+      revenue = allOrders
+        .filter((order) => order.status === "COMPLETED")
+        .reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
+    }
 
     // Get notifications
     const { data: notifications, error: notificationsError } = await supabase
@@ -202,10 +233,10 @@ class CafeController {
       .limit(10);
 
     const stats = {
-      totalOrders: 0, // Placeholder
-      monthlyOrders: cafe.current_month_orders || 0,
-      orderLimit: cafe.monthly_order_limit || 0,
-      revenue: 0, // Placeholder
+      totalOrders,
+      monthlyOrders,
+      orderLimit: cafe.monthly_order_limit || null,
+      revenue,
     };
 
     res.json({
@@ -230,6 +261,36 @@ class CafeController {
         recentOrders,
         notifications: notifications || [],
       },
+    });
+  });
+
+  // Get public cafes for listing page
+  static getPublicCafes = asyncHandler(async (req, res) => {
+    const { data, error } = await supabase
+      .from("cafes")
+      .select(
+        `
+        id,
+        name,
+        description,
+        address,
+        city,
+        phone,
+        logo_url,
+        cover_image_url,
+        plan
+      `
+      )
+      .eq("status", "ACTIVE")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error("Failed to fetch cafes");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: data || [],
     });
   });
 

@@ -161,9 +161,35 @@ export const syncUser = async (req, res, next) => {
 export const requireCafeOwnership = async (req, res, next) => {
   try {
     const { cafeId } = req.params;
-    const userId = req.user.id;
+    const auth = req.auth();
 
-    if (req.user.role === ROLES.ADMIN) {
+    if (!auth?.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Get user from Supabase
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", auth.userId)
+      .single();
+
+    if (userError || !user) {
+      console.error("User fetch error:", userError);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    req.user = user; // Set user for subsequent middleware/controllers
+    const userId = user.id;
+
+    console.log("🔍 Checking cafe ownership:", {
+      cafeId,
+      userId,
+      userRole: user.role,
+    });
+
+    if (user.role === ROLES.ADMIN) {
+      console.log("✅ Admin access granted");
       return next(); // Admins can access any cafe
     }
 
@@ -174,10 +200,23 @@ export const requireCafeOwnership = async (req, res, next) => {
       .eq("owner_id", userId)
       .single();
 
+    console.log("🔍 Cafe query result:", {
+      cafe: cafe?.id,
+      error: error?.message,
+    });
+
     if (error || !cafe) {
-      return res.status(403).json({ error: "You do not own this cafe" });
+      console.log(
+        "❌ Cafe ownership denied:",
+        error?.message || "No cafe found"
+      );
+      return res.status(403).json({
+        error: "You do not own this cafe",
+        details: { cafeId, userId, dbError: error?.message },
+      });
     }
 
+    console.log("✅ Cafe ownership verified");
     req.cafe = cafe;
     next();
   } catch (error) {

@@ -18,15 +18,10 @@ const cafeApplicationSchema = Joi.object({
   logoUrl: Joi.string().uri().allow("").optional(),
   address: Joi.string().min(5).max(500).required(),
   city: Joi.string().min(2).max(100).required(),
-  state: Joi.string().min(2).max(100).required(),
+  state: Joi.string().min(2).max(100).optional(),
   postalCode: Joi.string().min(3).max(20).required(),
   country: Joi.string().min(2).max(100).default("Bangladesh"),
-  phone: Joi.string()
-    .pattern(/^\+8801\d{9}$/)
-    .message(
-      "Phone number must be in format +8801XXXXXXXXX (11 digits after +8801)"
-    )
-    .required(),
+  phone: Joi.string().required(),
   email: Joi.string().email().required(),
   websiteUrl: Joi.string().uri().allow("").optional(),
   socialLinks: Joi.object({
@@ -60,12 +55,7 @@ const updateApplicationSchema = Joi.object({
   state: Joi.string().min(2).max(100).optional(),
   postalCode: Joi.string().min(3).max(20).optional(),
   country: Joi.string().min(2).max(100).default("Bangladesh").optional(),
-  phone: Joi.string()
-    .pattern(/^\+8801\d{9}$/)
-    .message(
-      "Phone number must be in format +8801XXXXXXXXX (11 digits after +8801)"
-    )
-    .optional(),
+  phone: Joi.string().optional(),
   email: Joi.string().email().optional(),
   websiteUrl: Joi.string().uri().allow("").optional(),
   socialLinks: Joi.object({
@@ -86,12 +76,7 @@ const updateCafeSchema = Joi.object({
   state: Joi.string().min(2).max(100).optional(),
   postal_code: Joi.string().min(3).max(20).optional(),
   country: Joi.string().min(2).max(100).default("Bangladesh").optional(),
-  phone: Joi.string()
-    .pattern(/^\+8801\d{9}$/)
-    .message(
-      "Phone number must be in format +8801XXXXXXXXX (11 digits after +8801)"
-    )
-    .optional(),
+  phone: Joi.string().optional(),
   email: Joi.string().email().optional(),
   website_url: Joi.string().uri().allow("").optional(),
   logo_url: Joi.string().uri().allow("").optional(),
@@ -171,5 +156,8 @@ router.put(
   validateRequest(updateCafeSchema),
   CafeController.updateCafe
 );
+
+// Public routes (no auth required)
+router.get("/public/list", CafeController.getPublicCafes);
 
 export default router;

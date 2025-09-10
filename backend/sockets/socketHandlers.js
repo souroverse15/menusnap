@@ -227,6 +227,48 @@ export const handleSocketConnection = (io, socket) => {
   socket.on("error", (error) => {
     console.error(`🔌 Socket error for user ${socket.user.email}:`, error);
   });
+
+  // Order-related events
+  socket.on("join_order_updates", (orderId) => {
+    socket.join(`order:${orderId}`);
+    console.log(
+      `User ${socket.user.email} joined order updates for ${orderId}`
+    );
+  });
+
+  socket.on("leave_order_updates", (orderId) => {
+    socket.leave(`order:${orderId}`);
+    console.log(`User ${socket.user.email} left order updates for ${orderId}`);
+  });
+
+  socket.on("join_cafe_orders", (cafeId) => {
+    if (socket.user.role === "CAFE_OWNER" || socket.user.role === "ADMIN") {
+      socket.join(`cafe_orders:${cafeId}`);
+      console.log(
+        `Cafe owner ${socket.user.email} joined cafe orders for ${cafeId}`
+      );
+    }
+  });
+
+  socket.on("leave_cafe_orders", (cafeId) => {
+    socket.leave(`cafe_orders:${cafeId}`);
+    console.log(`User ${socket.user.email} left cafe orders for ${cafeId}`);
+  });
+
+  // Queue-related events for customers to watch queue updates
+  socket.on("join_queue_updates", (cafeId) => {
+    socket.join(`queue:${cafeId}`);
+    console.log(
+      `User ${socket.user.email} joined queue updates for cafe ${cafeId}`
+    );
+  });
+
+  socket.on("leave_queue_updates", (cafeId) => {
+    socket.leave(`queue:${cafeId}`);
+    console.log(
+      `User ${socket.user.email} left queue updates for cafe ${cafeId}`
+    );
+  });
 };
 
 // Helper function to check if user can join a room
@@ -271,4 +313,49 @@ export const emitToCafe = (io, cafeId, event, data) => {
 
 export const broadcastToAll = (io, event, data) => {
   io.emit(event, data);
+};
+
+// Order-specific event emitters
+export const emitOrderUpdate = (io, orderId, cafeId, orderData) => {
+  // Emit to customer
+  if (orderData.customer_id) {
+    io.to(`user:${orderData.customer_id}`).emit("order:updated", {
+      orderId,
+      order: orderData,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Emit to cafe orders room
+  io.to(`cafe_orders:${cafeId}`).emit("order:updated", {
+    cafeId,
+    orderId,
+    order: orderData,
+    timestamp: new Date().toISOString(),
+  });
+};
+
+export const emitQueueUpdate = (io, cafeId, queueData) => {
+  // Emit to public queue watchers
+  io.to(`queue:${cafeId}`).emit("queue:updated", {
+    cafeId,
+    queue: queueData,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Emit to cafe orders room
+  io.to(`cafe_orders:${cafeId}`).emit("queue:updated", {
+    cafeId,
+    queue: queueData,
+    timestamp: new Date().toISOString(),
+  });
+};
+
+export const emitNewOrder = (io, cafeId, orderData) => {
+  // Emit to cafe orders room
+  io.to(`cafe_orders:${cafeId}`).emit("order:new", {
+    cafeId,
+    order: orderData,
+    timestamp: new Date().toISOString(),
+  });
 };

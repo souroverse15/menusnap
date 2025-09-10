@@ -72,6 +72,12 @@ export const SOCKET_EVENTS = {
   APPLICATION_APPROVED: "application:approved", // payload: cafeId
   NOTIFICATION_NEW: "notification:new", // generic bell alerts
   SUPPORT_MESSAGE: "support:message", // live chat threads
+
+  // Order events
+  ORDER_NEW: "order:new",
+  ORDER_UPDATED: "order:updated",
+  ORDER_STATUS_CHANGED: "order:status_changed",
+  QUEUE_UPDATED: "queue:updated",
 };
 
 // Helper function to get plan details by type
